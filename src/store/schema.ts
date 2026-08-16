@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export type BrewMethod = 'espresso' | 'v60'
 
@@ -33,6 +33,15 @@ export type Coffee = {
   grind: Partial<Record<BrewMethod, GrindTrack>>
 }
 
+/**
+ * Cómo se ocupa la ventana de tiempo de un vertido.
+ *
+ * No es un detalle de presentación: es la diferencia entre las escuelas. Rao
+ * vierte continuo a propósito después del bloom; Kasuya pulsa y espera a que
+ * el lecho casi drene. El bloom es pulsado siempre, en las tres.
+ */
+export type PourStyle = 'pulse' | 'continuous'
+
 export type Step =
   | {
       id: string
@@ -42,6 +51,8 @@ export type Step =
       endSec: number
       /** Fracción acumulada del agua total al terminar el paso (0..1). */
       cumulative: number
+      /** 'pulse' vierte a `flowRate` y espera el resto; 'continuous' llena la ventana. */
+      style: PourStyle
     }
   | { id: string; kind: 'wait'; label: string; startSec: number; endSec: number }
   | { id: string; kind: 'drawdown'; label: string; startSec: number; maxEndSec: number }
@@ -52,11 +63,19 @@ export type Recipe = {
   author?: string
   /** ml de agua total por gramo de café. 15 = ratio 1:15. */
   ratio: number
+  /** g/s de referencia para los pasos pulsados. */
+  flowRate: number
   steps: Step[]
   notes?: string
   createdAt: string
   updatedAt: string
 }
+
+/** Caudal cómodo de una pava de cuello de ganso. */
+export const DEFAULT_FLOW_RATE = 6
+
+/** Por encima de esto ninguna pava vierte de forma controlada. */
+export const MAX_FLOW_RATE = 8
 
 export type Settings = {
   sound: boolean

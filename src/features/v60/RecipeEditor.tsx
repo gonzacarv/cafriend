@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Sheet } from '../../ui/Sheet'
 import { mmss, parseMmss } from '../../lib/format'
-import { validateRecipe } from '../../lib/scaling'
-import { newId, stepEnd, type Recipe, type Step } from '../../store/schema'
+import { blockingIssues, splitPour, validateRecipe } from '../../lib/scaling'
+import { newId, stepEnd, type PourStyle, type Recipe, type Step } from '../../store/schema'
 
 const KIND_LABEL: Record<Step['kind'], string> = {
   bloom: 'Bloom',
@@ -48,7 +48,8 @@ export function RecipeEditor({
         if (kind === 'drawdown') return { id: s.id, kind, label, startSec: start, maxEndSec: end }
         if (kind === 'wait') return { id: s.id, kind, label, startSec: start, endSec: end }
         const cumulative = 'cumulative' in s ? s.cumulative : 1
-        return { id: s.id, kind, label, startSec: start, endSec: end, cumulative }
+        const style: PourStyle = 'style' in s ? s.style : 'pulse'
+        return { id: s.id, kind, label, startSec: start, endSec: end, cumulative, style }
       }),
     }))
 
@@ -63,6 +64,7 @@ export function RecipeEditor({
         startSec: start,
         endSec: start + 30,
         cumulative: 1,
+        style: 'pulse',
       }
       return { ...d, steps: [...d.steps, step] }
     })
@@ -70,35 +72,51 @@ export function RecipeEditor({
   const removeStep = (index: number) =>
     setDraft((d) => ({ ...d, steps: d.steps.filter((_, i) => i !== index) }))
 
+  const errors = blockingIssues(issues)
+  const warnings = issues.filter((i) => i.severity === 'warn')
+
   const save = () => {
-    if (issues.length > 0) return setShowIssues(true)
+    // Las advertencias de caudal no bloquean: la receta es del usuario.
+    if (errors.length > 0) return setShowIssues(true)
     onSave(draft)
     onClose()
   }
 
   return (
     <Sheet title={recipe.name ? `Editar ${recipe.name}` : 'Nueva receta'} onClose={onClose}>
-      {showIssues && issues.length > 0 && (
+      {showIssues && errors.length > 0 && (
         <div className="issues">
           <strong>Revisá esto antes de guardar:</strong>
           <ul>
-            {issues.map((issue, i) => (
+            {errors.map((issue, i) => (
               <li key={i}>{issue.message}</li>
             ))}
           </ul>
         </div>
       )}
 
+      {warnings.length > 0 && (
+        <div className="issues issues--warn">
+          <strong>Se puede guardar, pero ojo:</strong>
+          <ul>
+            {warnings.map((issue, i) => (
+              <li key={i}>{issue.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <label className="field">
+        <span className="field__label">Nombre</span>
+        <input
+          className="input"
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+      </label>
+
       <div className="row">
         <label className="field">
-          <span className="field__label">Nombre</span>
-          <input
-            className="input"
-            value={draft.name}
-            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          />
-        </label>
-        <label className="field" style={{ maxWidth: 130 }}>
           <span className="field__label">Ratio 1:</span>
           <input
             className="input tnum"
@@ -111,6 +129,23 @@ export function RecipeEditor({
             onChange={(e) => setDraft({ ...draft, ratio: Number(e.target.value) })}
           />
         </label>
+        <label className="field">
+          <span className="field__label">Caudal (g/s)</span>
+          <input
+            className="input tnum"
+            type="number"
+            inputMode="decimal"
+            step="0.5"
+            min="1"
+            max="12"
+            value={draft.flowRate}
+            onChange={(e) => setDraft({ ...draft, flowRate: Number(e.target.value) })}
+          />
+        </label>
+      </div>
+      <div className="subtitle" style={{ marginTop: -6, marginBottom: 14 }}>
+        A qué velocidad vertés. Define cuánto dura cada pulso: 60 g a 6 g/s son 10 s de vertido, y el resto
+        de la ventana es espera. No afecta a los vertidos continuos.
       </div>
 
       <label className="field">
@@ -192,6 +227,16 @@ export function RecipeEditor({
               </div>
             )}
           </div>
+
+          {'style' in step && (
+            <StyleRow
+              step={step}
+              previousCumulative={previousCumulative(draft.steps, index)}
+              totalWater={totalWater}
+              flowRate={draft.flowRate}
+              onChange={(style) => patchStep(index, { style })}
+            />
+          )}
         </div>
       ))}
 
@@ -222,6 +267,69 @@ export function RecipeEditor({
         </button>
       )}
     </Sheet>
+  )
+}
+
+/** El acumulado del vertido anterior, para saber cuánta agua lleva este paso. */
+function previousCumulative(steps: Step[], index: number): number {
+  for (let i = index - 1; i >= 0; i--) {
+    const step = steps[i]
+    if ('cumulative' in step) return step.cumulative
+  }
+  return 0
+}
+
+/**
+ * Elige pulso o continuo y muestra en vivo en qué se traduce. Sin esta lectura
+ * el usuario no tiene forma de saber cuánta espera le queda al paso.
+ */
+function StyleRow({
+  step,
+  previousCumulative,
+  totalWater,
+  flowRate,
+  onChange,
+}: {
+  step: Extract<Step, { cumulative: number }>
+  previousCumulative: number
+  totalWater: number
+  flowRate: number
+  onChange: (style: PourStyle) => void
+}) {
+  const water = Math.round((step.cumulative - previousCumulative) * totalWater)
+  const { pourEndSec, waitSec } = splitPour(step.startSec, step.endSec, water, step.style, flowRate)
+  const pourSec = pourEndSec - step.startSec
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="tabs" style={{ marginBottom: 8 }}>
+        {(['pulse', 'continuous'] as const).map((style) => (
+          <button
+            key={style}
+            type="button"
+            role="tab"
+            className="tabs__item"
+            aria-selected={step.style === style}
+            onClick={() => onChange(style)}
+          >
+            {style === 'pulse' ? 'Pulso' : 'Continuo'}
+          </button>
+        ))}
+      </div>
+      <div className="subtitle">
+        {step.style === 'continuous' ? (
+          <>
+            Vertés {water} g durante los {mmss(step.endSec - step.startSec)} enteros, sin pausa.
+          </>
+        ) : waitSec > 0 ? (
+          <>
+            Vertés {water} g en {mmss(pourSec)} y esperás {mmss(waitSec)}.
+          </>
+        ) : (
+          <>Vertés {water} g y no queda espera: a esta dosis es continuo de hecho.</>
+        )}
+      </div>
+    </div>
   )
 }
 

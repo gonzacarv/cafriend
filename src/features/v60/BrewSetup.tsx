@@ -122,16 +122,29 @@ export function BrewSetup({
         <thead>
           <tr>
             <th>Paso</th>
-            <th>Tiempo</th>
+            <th>Verté</th>
+            <th>Esperá</th>
             <th>Balanza</th>
           </tr>
         </thead>
         <tbody>
           {steps.map((s) => (
             <tr key={s.step.id}>
-              <td>{s.step.label}</td>
+              <td>
+                {s.step.label}
+                <div className="plan__dim" style={{ fontSize: 12 }}>
+                  desde {mmss(s.startSec)}
+                </div>
+              </td>
               <td className="plan__dim tnum">
-                {mmss(s.startSec)} – {mmss(s.endSec)}
+                {s.targetWater === null ? '—' : mmss(s.pourEndSec - s.startSec)}
+              </td>
+              <td className="plan__dim tnum">
+                {s.step.kind === 'drawdown'
+                  ? mmss(s.durationSec)
+                  : s.waitSec > 0
+                    ? mmss(s.waitSec)
+                    : '—'}
               </td>
               <td className="tnum">
                 {s.targetWater === null ? <span className="plan__dim">—</span> : `${s.targetWater} g`}
@@ -140,6 +153,10 @@ export function BrewSetup({
           ))}
         </tbody>
       </table>
+      <div className="subtitle" style={{ marginTop: 8 }}>
+        A {recipe.flowRate} g/s. En los tramos de espera no viertas: dejá que el lecho drene hasta quedar
+        casi seco antes del vertido siguiente.
+      </div>
 
       <button
         type="button"

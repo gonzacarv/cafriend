@@ -1,6 +1,10 @@
 import { useEffect, type ReactNode } from 'react'
+import { useBackDismiss } from './useBackDismiss'
 
-/** Panel inferior modal. Se cierra tocando el fondo o con Escape. */
+/**
+ * Panel inferior modal. Se cierra con el botón ✕, tocando el fondo, con Escape
+ * o con el botón "volver" de Android.
+ */
 export function Sheet({
   title,
   subtitle,
@@ -12,6 +16,8 @@ export function Sheet({
   onClose: () => void
   children: ReactNode
 }) {
+  useBackDismiss(onClose)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -30,8 +36,15 @@ export function Sheet({
     <div className="sheet-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet__grip" />
-        <div className="sheet__title">{title}</div>
-        {subtitle && <div className="subtitle" style={{ marginBottom: 14 }}>{subtitle}</div>}
+        <div className="sheet__head">
+          <div>
+            <div className="sheet__title">{title}</div>
+            {subtitle && <div className="subtitle">{subtitle}</div>}
+          </div>
+          <button type="button" className="sheet__close" aria-label="Cerrar" onClick={onClose}>
+            ✕
+          </button>
+        </div>
         {children}
       </div>
     </div>

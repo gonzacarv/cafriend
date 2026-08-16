@@ -530,10 +530,38 @@ h3 {
   margin: 4px auto 14px;
 }
 
+.sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
 .sheet__title {
   font-size: 19px;
   font-weight: 700;
   margin-bottom: 4px;
+}
+
+.sheet__close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sheet__close:active {
+  background: var(--line);
+  color: var(--text);
 }
 
 @keyframes rise {
@@ -956,6 +984,12 @@ h3 {
 .issues ul {
   margin: 6px 0 0;
   padding-left: 18px;
+}
+
+/* Advertencia física, no error de estructura: se puede guardar igual. */
+.issues--warn {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .notice {

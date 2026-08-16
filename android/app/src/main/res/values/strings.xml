@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CaFriend</string>
+    <string name="title_activity_main">CaFriend</string>
+    <string name="package_name">com.gonzacarv.cafriend</string>
+    <string name="custom_url_scheme">com.gonzacarv.cafriend</string>
+</resources>

@@ -179,6 +179,10 @@ export function SettingsView() {
         Restaurar recetas originales (Hoffmann, Rao, Kasuya)
       </button>
 
+      <div className="subtitle" style={{ textAlign: 'center', margin: '28px 0 4px' }}>
+        CaFriend · build {typeof __BUILD__ === 'string' ? __BUILD__ : 'dev'}
+      </div>
+
       {pending && (
         <ImportSheet
           parsed={pending}

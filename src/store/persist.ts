@@ -1,7 +1,15 @@
-import { DEFAULT_SETTINGS, SCHEMA_VERSION, type Store } from './schema'
+import {
+  DEFAULT_FLOW_RATE,
+  DEFAULT_SETTINGS,
+  SCHEMA_VERSION,
+  type Recipe,
+  type Store,
+} from './schema'
 import { seedRecipes } from './seed'
 
-const KEY = 'cafriend.v1'
+// v2 cambió la estructura de los pasos (vertido vs. espera). No se migra: la
+// clave nueva hace que lo guardado con v1 se ignore y el store arranque limpio.
+const KEY = 'cafriend.v2'
 
 export function emptyStore(): Store {
   return {
@@ -27,7 +35,9 @@ export function normalize(raw: unknown): Store {
     coffees: Array.isArray(input.coffees) ? input.coffees.filter(isCoffeeish).map(fixCoffee) : [],
     // Un import sin recetas se queda sin recetas: si el usuario las borró a
     // propósito, no queremos que reaparezcan las semillas.
-    recipes: Array.isArray(input.recipes) ? input.recipes.filter(isRecipeish) : base.recipes,
+    recipes: Array.isArray(input.recipes)
+      ? input.recipes.filter(isRecipeish).map(fixRecipe)
+      : base.recipes,
     settings: { ...DEFAULT_SETTINGS, ...(input.settings ?? {}) },
   }
 }
@@ -43,6 +53,22 @@ function isRecipeish(r: unknown): boolean {
     typeof (r as { id?: unknown }).id === 'string' &&
     Array.isArray((r as { steps?: unknown }).steps)
   )
+}
+
+/**
+ * Completa los campos que un JSON importado puede no traer. `continuous`
+ * reproduce el comportamiento previo al split de vertido/espera, así que una
+ * receta vieja se comporta igual que antes en vez de cambiar sola.
+ */
+function fixRecipe(r: unknown): Recipe {
+  const recipe = r as Recipe
+  return {
+    ...recipe,
+    flowRate: Number.isFinite(recipe.flowRate) && recipe.flowRate > 0 ? recipe.flowRate : DEFAULT_FLOW_RATE,
+    steps: recipe.steps.map((step) =>
+      step.kind === 'bloom' || step.kind === 'pour' ? { ...step, style: step.style ?? 'continuous' } : step,
+    ),
+  }
 }
 
 /** El `current` es un espejo del historial: se recalcula, nunca se confía. */

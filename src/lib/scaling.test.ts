@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { seedRecipes } from '../store/seed'
-import { resolveSpec, resolveSteps, validateRecipe, cupYieldFrom } from './scaling'
-import type { Recipe } from '../store/schema'
+import { blockingIssues, resolveSpec, resolveSteps, splitPour, validateRecipe, cupYieldFrom } from './scaling'
+import { MAX_FLOW_RATE, type Recipe } from '../store/schema'
 
 const recipes = seedRecipes()
 const byName = (name: string): Recipe => {
@@ -52,31 +52,33 @@ describe('regresión contra la tabla de las notas', () => {
     ])
   })
 
-  it('Kasuya reproduce Kasu.2 exacto y el corte 4:6 en los tres tamaños', () => {
+  it('Kasuya ya NO sigue la tabla vieja: es el 4:6 canónico', () => {
+    // Deliberadamente distinto de las notas. La tabla original tenía 4 pulsos
+    // cada 15 s, que no le da tiempo a drenar a nada entre medio — eso es un
+    // vertido continuo disfrazado de pulsos. Se reemplazó por el método real:
+    // 5 vertidos separados ~45 s, 40 % inicial (dulzor/acidez) y 60 % restante
+    // en tres partes iguales (fuerza).
     const r = byName('Kasuya 4:6')
-    expect(targets(r, 20)).toEqual([50, 120, 200, 300])
-    expect(targets(r, 16)).toEqual([40, 96, 160, 240])
-    expect(targets(r, 24)).toEqual([60, 144, 240, 360])
+    expect(targets(r, 20)).toEqual([50, 120, 180, 240, 300])
+    expect(targets(r, 16)).toEqual([40, 96, 144, 192, 240])
+    expect(targets(r, 24)).toEqual([60, 144, 216, 288, 360])
     expect(times(r)).toEqual([
-      [0, 30],
-      [30, 45],
-      [45, 60],
-      [60, 75],
-      [75, 165],
+      [0, 45],
+      [45, 90],
+      [90, 130],
+      [130, 170],
+      [170, 185],
+      [185, 210],
     ])
   })
 
-  it('las desviaciones respecto de la tabla vieja son las esperadas y solo en pours intermedios', () => {
+  it('las desviaciones de Rao respecto de la tabla vieja son las esperadas', () => {
     // La tabla original no era internamente consistente: el mismo estilo daba
     // porcentajes distintos según el tamaño. Estas son las únicas diferencias,
-    // todas en un pour intermedio y de pocos ml — el objetivo final siempre cierra.
+    // ambas en un pour intermedio — el objetivo final siempre cierra exacto.
     const rao = byName('Rao')
     expect(targets(rao, 20)[1] - 220).toBe(5) // notas 220 → 225 (0.75 fijo)
     expect(targets(rao, 24)[1] - 260).toBe(10) // notas 260 → 270
-
-    const kasuya = byName('Kasuya 4:6')
-    expect(targets(kasuya, 16)[1] - 100).toBe(-4) // notas 100 → 96 (40 % exacto)
-    expect(targets(kasuya, 24)[1] - 150).toBe(-6) // notas 150 → 144
   })
 })
 
@@ -103,6 +105,95 @@ describe('escalado a dosis arbitrarias', () => {
     for (const r of recipes) {
       const t = targets(r, 18)
       for (let i = 1; i < t.length; i++) expect(t[i]).toBeGreaterThan(t[i - 1])
+    }
+  })
+})
+
+describe('splitPour — vertido vs. espera', () => {
+  it('un paso continuo llena su ventana y no deja espera', () => {
+    expect(splitPour(30, 75, 120, 'continuous', 6)).toEqual({
+      pourEndSec: 75,
+      waitSec: 0,
+      flowRequired: 120 / 45,
+    })
+  })
+
+  it('un pulso tarda agua/caudal y espera el resto', () => {
+    const { pourEndSec, waitSec } = splitPour(0, 45, 40, 'pulse', 6)
+    expect(pourEndSec).toBe(7) // 40 g / 6 g/s ≈ 7 s
+    expect(waitSec).toBe(38)
+  })
+
+  it('al subir la dosis el vertido crece y la espera se acorta', () => {
+    // Es la razón de definir el vertido por caudal y no por segundos fijos.
+    const chico = splitPour(0, 45, 40, 'pulse', 6) // bloom a 16 g
+    const grande = splitPour(0, 45, 60, 'pulse', 6) // bloom a 24 g
+    expect(grande.pourEndSec).toBeGreaterThan(chico.pourEndSec)
+    expect(grande.waitSec).toBeLessThan(chico.waitSec)
+    expect(grande.pourEndSec).toBe(10)
+    expect(grande.waitSec).toBe(35)
+  })
+
+  it('un pulso que no entra en su ventana se acota y queda continuo de hecho', () => {
+    const { pourEndSec, waitSec, flowRequired } = splitPour(0, 10, 200, 'pulse', 6)
+    expect(pourEndSec).toBe(10)
+    expect(waitSec).toBe(0)
+    expect(flowRequired).toBe(20) // absurdo, y por eso validateRecipe avisa
+  })
+
+  it('nunca produce una espera negativa ni un vertido de 0 s', () => {
+    for (const water of [1, 5, 40, 120, 400]) {
+      for (const [start, end] of [
+        [0, 5],
+        [0, 45],
+        [30, 130],
+      ]) {
+        const { pourEndSec, waitSec } = splitPour(start, end, water, 'pulse', 6)
+        expect(waitSec).toBeGreaterThanOrEqual(0)
+        expect(pourEndSec).toBeGreaterThan(start)
+        expect(pourEndSec).toBeLessThanOrEqual(end)
+      }
+    }
+  })
+})
+
+describe('estilos en las recetas semilla', () => {
+  it('el bloom es pulsado en las tres — se vierte rápido y se espera', () => {
+    for (const r of recipes) {
+      const bloom = r.steps.find((s) => s.kind === 'bloom')
+      expect(bloom && 'style' in bloom && bloom.style).toBe('pulse')
+    }
+  })
+
+  it('Rao vierte continuo después del bloom; Kasuya pulsa todo', () => {
+    const rao = byName('Rao').steps.filter((s) => s.kind === 'pour')
+    expect(rao.every((s) => 'style' in s && s.style === 'continuous')).toBe(true)
+
+    const kasuya = byName('Kasuya 4:6').steps.filter((s) => s.kind === 'pour')
+    expect(kasuya.every((s) => 'style' in s && s.style === 'pulse')).toBe(true)
+  })
+
+  it('los pulsos de Kasuya dejan espera suficiente para drenar, en todo el rango de dosis', () => {
+    // El último pulso se excluye a propósito: su espera es el drenado final,
+    // que viene como paso aparte. Los intermedios sí tienen que dar tiempo a
+    // que el lecho baje antes del vertido siguiente.
+    const r = byName('Kasuya 4:6')
+    for (const dose of [15, 20, 25]) {
+      const pours = resolveSteps(r, dose * r.ratio).filter((s) => s.targetWater !== null)
+      for (const s of pours.slice(0, -1)) {
+        expect(s.waitSec).toBeGreaterThanOrEqual(15)
+      }
+      // Y el último tiene que caber en su ventana sin desbordar.
+      expect(pours[pours.length - 1].waitSec).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('ninguna receta semilla exige un caudal impracticable', () => {
+    for (const r of recipes) {
+      for (const s of resolveSteps(r, 25 * r.ratio)) {
+        if (s.flowRequired === null) continue
+        expect(s.flowRequired).toBeLessThanOrEqual(MAX_FLOW_RATE)
+      }
     }
   })
 })
@@ -138,8 +229,36 @@ describe('resolveSpec', () => {
 })
 
 describe('validateRecipe', () => {
-  it('acepta las tres recetas semilla', () => {
+  it('acepta las tres recetas semilla sin un solo aviso', () => {
     for (const r of recipes) expect(validateRecipe(r)).toEqual([])
+  })
+
+  it('avisa —sin bloquear— cuando un paso exige un caudal imposible', () => {
+    const r = byName('Hoffmann')
+    // Todo el vertido comprimido en 3 s: ninguna pava hace eso.
+    const imposible: Recipe = {
+      ...r,
+      steps: r.steps.map((s) => (s.label === 'Pour 1' ? { ...s, endSec: s.startSec + 3 } : s)),
+    }
+    const issues = validateRecipe(imposible)
+    expect(issues.some((i) => i.severity === 'warn' && i.message.includes('g/s'))).toBe(true)
+    expect(blockingIssues(issues)).toEqual([])
+  })
+
+  it('avisa —sin bloquear— cuando un pulso no deja espera', () => {
+    const r = byName('Kasuya 4:6')
+    const sinEspera: Recipe = {
+      ...r,
+      steps: r.steps.map((s) => (s.label === 'Pour 3' ? { ...s, endSec: s.startSec + 4 } : s)),
+    }
+    const issues = validateRecipe(sinEspera)
+    expect(issues.some((i) => i.severity === 'warn')).toBe(true)
+    expect(blockingIssues(issues)).toEqual([])
+  })
+
+  it('un caudal inválido sí bloquea', () => {
+    const r = byName('Rao')
+    expect(blockingIssues(validateRecipe({ ...r, flowRate: 0 })).length).toBeGreaterThan(0)
   })
 
   it('rechaza objetivos que no cierran en 100 %', () => {
@@ -153,11 +272,12 @@ describe('validateRecipe', () => {
 
   it('rechaza objetivos que retroceden', () => {
     const r = byName('Kasuya 4:6')
+    // 0.10 queda por debajo del bloom (1/6), así que el acumulado retrocede.
     const broken: Recipe = {
       ...r,
-      steps: r.steps.map((s) => (s.kind === 'pour' && s.label === 'Pour 2' ? { ...s, cumulative: 0.2 } : s)),
+      steps: r.steps.map((s) => (s.kind === 'pour' && s.label === 'Pour 2' ? { ...s, cumulative: 0.1 } : s)),
     }
-    expect(validateRecipe(broken).some((i) => i.message.includes('acumulado'))).toBe(true)
+    expect(blockingIssues(validateRecipe(broken)).some((i) => i.message.includes('acumulado'))).toBe(true)
   })
 
   it('rechaza pasos solapados y de duración cero', () => {

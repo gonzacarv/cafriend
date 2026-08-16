@@ -4,6 +4,7 @@ import { resolveSteps, totalDurationSec, type ResolvedStep } from '../../lib/sca
 import { closeAudio, playDoneCue, playPourCue, playTick, playWaitCue, unlockAudio } from '../../lib/audio'
 import { stopVibration, vibrate } from '../../lib/haptics'
 import { useWakeLock } from '../../lib/wakelock'
+import { useBackDismiss } from '../../ui/useBackDismiss'
 import type { Recipe, Settings } from '../../store/schema'
 
 export type BrewParams = {
@@ -13,10 +14,19 @@ export type BrewParams = {
   coffeeName?: string
 }
 
+/** Espera mínima para que valga la pena hablar de drenado del lecho. */
+const MEANINGFUL_WAIT_SEC = 12
+
+type Phase = 'pour' | 'wait'
+
 /**
  * Asistente de brewing. Una vez que arranca corre solo de punta a punta: no
  * hay ningún paso que dependa de que el usuario toque algo, porque el tiempo
  * total de la receta tiene que cumplirse tal cual está definida.
+ *
+ * Cada paso se muestra en dos tramos, vertido y espera, porque salvo en los
+ * vertidos continuos uno no vierte durante toda la ventana: vierte y espera a
+ * que el lecho drene.
  */
 export function BrewAssistant({
   params,
@@ -43,6 +53,9 @@ export function BrewAssistant({
   const finished = elapsed >= duration
 
   useWakeLock(!finished)
+  // El asistente ocupa toda la pantalla: "volver" tiene que sacarte de acá,
+  // igual que el ✕, y no cerrar la app.
+  useBackDismiss(onExit)
 
   useEffect(() => {
     unlockAudio()
@@ -82,13 +95,21 @@ export function BrewAssistant({
     }
   }
 
-  if (finished) {
+  if (finished || !current) {
     return <BrewSummary params={params} onExit={onExit} />
   }
 
-  const remaining = current ? Math.max(0, current.endSec - elapsed) : 0
-  const progress = current && current.durationSec > 0 ? (elapsed - current.startSec) / current.durationSec : 0
-  const kind = current?.step.kind ?? 'wait'
+  const pouring = current.targetWater !== null && elapsed < current.pourEndSec
+
+  // La barra mide el tramo en curso, no el paso entero: es lo que el usuario
+  // está haciendo ahora.
+  const phaseStart = pouring ? current.startSec : current.pourEndSec
+  const phaseEnd = pouring ? current.pourEndSec : current.endSec
+  const phaseLength = Math.max(0.001, phaseEnd - phaseStart)
+  const remaining = Math.max(0, phaseEnd - elapsed)
+  const progress = (elapsed - phaseStart) / phaseLength
+
+  const kind = pouring ? current.step.kind : current.step.kind === 'drawdown' ? 'drawdown' : 'wait'
 
   return (
     <div className={`brew brew--${kind}`}>
@@ -105,36 +126,13 @@ export function BrewAssistant({
         <div className="brew__ring">
           <Ring progress={progress} />
           <div className="brew__ring-inner">
-            <div className="brew__label">{current?.step.label}</div>
+            <div className="brew__label">{pouring ? 'Verté' : 'Esperá'}</div>
             <div className="brew__remaining tnum">{mmss(remaining)}</div>
-            {current?.targetWater !== null && current !== undefined ? (
-              <>
-                <div className="brew__target tnum">{current.targetWater} g</div>
-                <div className="brew__target-label">objetivo en balanza</div>
-                {current.pourWater !== null && (
-                  <div className="brew__pour-hint">
-                    verté {current.pourWater} g en {mmss(current.durationSec)}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="brew__pour-hint">
-                {kind === 'drawdown' ? 'no viertas más — dejá drenar' : 'esperá, sin verter'}
-              </div>
-            )}
+            <PhaseDetail step={current} pouring={pouring} />
           </div>
         </div>
 
-        <div className="brew__next">
-          {next ? (
-            <>
-              Sigue: <strong>{next.step.label}</strong>
-              {next.targetWater !== null && ` hasta ${next.targetWater} g`} · {mmss(next.startSec)}
-            </>
-          ) : (
-            'Último paso'
-          )}
-        </div>
+        <div className="brew__next">{describeNext(current, next, pouring)}</div>
       </div>
 
       <div className="brew__controls">
@@ -143,15 +141,83 @@ export function BrewAssistant({
         </button>
       </div>
       <div className="subtitle" style={{ textAlign: 'center', marginTop: 10 }}>
-        {grams(dose)} g · {totalWater} ml · {params.coffeeName ?? recipe.name}
+        {params.coffeeName ? `${params.coffeeName} · ` : ''}
+        {grams(dose)} g · {totalWater} ml · {recipe.name}
       </div>
     </div>
   )
 }
 
+/** El bloque grande de abajo del reloj: qué hacer, o qué debería estar pasando. */
+function PhaseDetail({ step, pouring }: { step: ResolvedStep; pouring: boolean }) {
+  if (pouring && step.targetWater !== null) {
+    const pourSec = step.pourEndSec - step.startSec
+    return (
+      <>
+        <div className="brew__target tnum">{step.targetWater} g</div>
+        <div className="brew__target-label">objetivo en balanza</div>
+        <div className="brew__pour-hint">
+          {step.pourWater} g en {mmss(pourSec)}
+          {step.flowRequired !== null && ` · ${step.flowRequired.toFixed(1)} g/s`}
+        </div>
+      </>
+    )
+  }
+
+  if (step.step.kind === 'drawdown') {
+    return (
+      <>
+        <div className="brew__target-label" style={{ marginTop: 10 }}>
+          no viertas más
+        </div>
+        <div className="brew__pour-hint">el filtro debería quedar seco al terminar</div>
+      </>
+    )
+  }
+
+  // Espera entre pulsos: lo que se mira es el nivel del agua en el cono.
+  return (
+    <>
+      {step.targetWater !== null && (
+        <>
+          <div className="brew__target tnum" style={{ opacity: 0.55 }}>
+            {step.targetWater} g
+          </div>
+          <div className="brew__target-label">ya vertido</div>
+        </>
+      )}
+      <div className="brew__pour-hint">
+        {step.waitSec >= MEANINGFUL_WAIT_SEC
+          ? 'debería quedar casi drenado, no seco'
+          : 'dejá que baje el nivel'}
+      </div>
+    </>
+  )
+}
+
+function describeNext(current: ResolvedStep, next: ResolvedStep | undefined, pouring: boolean) {
+  // Dentro del mismo paso, lo que viene es la espera: hay que anticiparla para
+  // que el usuario no siga vertiendo por inercia.
+  if (pouring && current.waitSec > 0) {
+    return (
+      <>
+        Después: <strong>esperar {mmss(current.waitSec)}</strong>
+      </>
+    )
+  }
+  if (!next) return 'Último tramo'
+  return (
+    <>
+      Sigue: <strong>{next.step.label}</strong>
+      {next.targetWater !== null && ` hasta ${next.targetWater} g`} · {mmss(next.startSec)}
+    </>
+  )
+}
+
 /**
- * Dispara sonido y vibración en cada transición de paso, más tres ticks de
- * cuenta regresiva antes. Cada señal se emite una sola vez.
+ * Dispara sonido y vibración en cada transición, más tres ticks de cuenta
+ * regresiva antes. Los tramos de vertido y de espera cuentan por separado:
+ * el punto de todo esto es saber cuándo dejar de verter sin mirar la pantalla.
  */
 function useCues(steps: ResolvedStep[], elapsed: number, finished: boolean, settings: Settings) {
   const fired = useRef(new Set<string>())
@@ -163,13 +229,20 @@ function useCues(steps: ResolvedStep[], elapsed: number, finished: boolean, sett
       fn()
     }
 
+    /** Cada momento en que el usuario tiene que hacer algo distinto. */
+    const cues: { at: number; key: string; phase: Phase }[] = []
     for (const s of steps) {
-      // Ticks en los 3 s previos al comienzo de cada paso (salvo el primero).
-      if (s.startSec > 0) {
+      const pours = s.targetWater !== null
+      cues.push({ at: s.startSec, key: `${s.index}-pour`, phase: pours ? 'pour' : 'wait' })
+      if (s.waitSec > 0) cues.push({ at: s.pourEndSec, key: `${s.index}-wait`, phase: 'wait' })
+    }
+
+    for (const cue of cues) {
+      if (cue.at > 0) {
         for (let t = 3; t >= 1; t--) {
-          const at = s.startSec - t
+          const at = cue.at - t
           if (elapsed >= at && elapsed < at + 0.9) {
-            fire(`tick-${s.index}-${t}`, () => {
+            fire(`tick-${cue.key}-${t}`, () => {
               if (settings.sound) playTick()
               if (settings.haptics) vibrate('tick')
             })
@@ -177,11 +250,10 @@ function useCues(steps: ResolvedStep[], elapsed: number, finished: boolean, sett
         }
       }
 
-      if (elapsed >= s.startSec && elapsed < s.startSec + 1) {
-        fire(`step-${s.index}`, () => {
-          const pouring = s.step.kind === 'bloom' || s.step.kind === 'pour'
-          if (settings.sound) (pouring ? playPourCue : playWaitCue)()
-          if (settings.haptics) vibrate(pouring ? 'pour' : 'wait')
+      if (elapsed >= cue.at && elapsed < cue.at + 1) {
+        fire(`cue-${cue.key}`, () => {
+          if (settings.sound) (cue.phase === 'pour' ? playPourCue : playWaitCue)()
+          if (settings.haptics) vibrate(cue.phase === 'pour' ? 'pour' : 'wait')
         })
       }
     }
@@ -217,14 +289,14 @@ function Ring({ progress }: { progress: number }) {
 }
 
 /**
- * Cierre del brew. El punto del drenado es diagnóstico: si al llegar al tiempo
- * objetivo todavía gotea, la molienda está muy fina; si drenó mucho antes,
- * muy gruesa. Por eso el resumen dice qué debería haber pasado.
+ * Cierre del brew. El drenado es diagnóstico: si al llegar al tiempo objetivo
+ * todavía gotea, la molienda está muy fina; si drenó mucho antes, muy gruesa.
  */
 function BrewSummary({ params, onExit }: { params: BrewParams; onExit: () => void }) {
   const { recipe, dose, totalWater } = params
   const duration = totalDurationSec(recipe)
   const drawdown = recipe.steps.find((s) => s.kind === 'drawdown')
+  const pulsed = recipe.steps.some((s) => (s.kind === 'bloom' || s.kind === 'pour') && s.style === 'pulse')
 
   return (
     <div className="brew brew--done">
@@ -263,6 +335,13 @@ function BrewSummary({ params, onExit }: { params: BrewParams; onExit: () => voi
               </li>
               <li>Terminó cerca del objetivo → estás en punto.</li>
             </ul>
+            {pulsed && (
+              <div className="subtitle" style={{ marginTop: 12 }}>
+                Los pulsos tardíos drenan más lento que los primeros: los finos migran y el filtro se carga.
+                Eso es normal. La comparación que vale es contra el tiempo total; el drenado de cada pulso es
+                una señal direccional, y la agitación al verter lo mueve tanto como la molienda.
+              </div>
+            )}
           </div>
         </div>
       </div>

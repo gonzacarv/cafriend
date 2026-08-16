@@ -116,6 +116,7 @@ describe('V60', () => {
     expect(screen.getByText('Rao')).toBeTruthy()
     expect(screen.getByText('Kasuya 4:6')).toBeTruthy()
     expect(screen.getByText(/James Hoffmann · 1:15 · 3 vertidos · 2:30/)).toBeTruthy()
+    expect(screen.getByText(/Tetsu Kasuya · 1:15 · 5 vertidos · 3:30/)).toBeTruthy()
   })
 
   it('el setup calcula las tres magnitudes y arma el plan', async () => {
@@ -137,7 +138,17 @@ describe('V60', () => {
 
     // El plan lista los objetivos de balanza, cerrando en el agua total.
     const rows = within(dialog).getAllByRole('row').slice(1)
-    expect(rows.map((r) => r.querySelectorAll('td')[2].textContent)).toEqual(['48 g', '192 g', '288 g', '—'])
+    expect(rows.map((r) => r.querySelectorAll('td')[3].textContent)).toEqual(['48 g', '192 g', '288 g', '—'])
+
+    // Y separa vertido de espera: el bloom de Hoffmann es pulsado, los pours
+    // continuos (columnas: paso, verté, esperá, balanza).
+    expect([...rows[0].querySelectorAll('td')].map((td) => td.textContent)).toEqual([
+      'Bloomdesde 0:00',
+      '0:08', // 48 g a 6 g/s
+      '0:22',
+      '48 g',
+    ])
+    expect(rows[1].querySelectorAll('td')[2].textContent).toBe('—') // continuo: sin espera
   })
 
   it('el asistente arranca en el bloom y muestra el objetivo en balanza', async () => {
@@ -155,9 +166,12 @@ describe('V60', () => {
     await user.type(input, '16')
     await user.click(within(dialog).getByRole('button', { name: '▶ Iniciar' }))
 
-    expect(screen.getByText('Bloom')).toBeTruthy()
+    // Arranca vertiendo, no esperando.
+    expect(screen.getByText('Verté')).toBeTruthy()
     expect(screen.getByText('48 g')).toBeTruthy() // Rao.1: bloom 48 ml
-    expect(screen.getByText(/Sigue:/)).toBeTruthy()
+    expect(screen.getByText(/48 g en 0:08/)).toBeTruthy()
+    // Bloom pulsado: 48 g a 6 g/s son 8 s de vertido, y quedan 37 s de espera.
+    expect(screen.getByText('esperar 0:37')).toBeTruthy()
     expect(screen.getByText(/16 g · 240 ml/)).toBeTruthy()
     // Sin botones de avance manual: la receta corre sola de punta a punta.
     expect(screen.queryByRole('button', { name: /Saltar|Ya drenó|\+5/ })).toBeNull()
@@ -172,14 +186,14 @@ describe('V60', () => {
     try {
       renderApp()
       await user.click(screen.getByRole('button', { name: /V60/ }))
-      const raoCard = screen.getByText('Rao').closest('.card') as HTMLElement
-      await user.click(within(raoCard).getByRole('button', { name: 'Preparar Rao' }))
+      const card = screen.getByText('Kasuya 4:6').closest('.card') as HTMLElement
+      await user.click(within(card).getByRole('button', { name: 'Preparar Kasuya 4:6' }))
 
       const dialog = screen.getByRole('dialog')
       await user.click(within(dialog).getByRole('tab', { name: 'Café' }))
       const input = within(dialog).getByLabelText('Cantidad')
       await user.clear(input)
-      await user.type(input, '16')
+      await user.type(input, '20')
       await user.click(within(dialog).getByRole('button', { name: '▶ Iniciar' }))
 
       const jump = async (seconds: number) => {
@@ -188,25 +202,37 @@ describe('V60', () => {
         })
       }
 
-      // Rao.1 (16 g / 240 ml): bloom→48 g, pour 1→180 g, pour 2→240 g, fin 2:45.
-      expect(screen.getByText('Bloom')).toBeTruthy()
-      expect(screen.getByText('48 g')).toBeTruthy()
+      // Kasuya 4:6 a 20 g / 300 ml: 50 → 120 → 180 → 240 → 300 g, todos pulsados.
+      // Cada pulso alterna vertido corto y espera larga.
+      const target = () => screen.getByText(/^\d+ g$/).textContent
 
-      await jump(50) // 0:50 → Pour 1
-      expect(screen.getByText('Pour 1')).toBeTruthy()
-      expect(screen.getByText('180 g')).toBeTruthy()
+      expect(screen.getByText('Verté')).toBeTruthy()
+      expect(target()).toBe('50 g') // bloom: 50 g en ~8 s
 
-      await jump(50) // 1:40 → Pour 2
-      expect(screen.getByText('Pour 2')).toBeTruthy()
-      expect(screen.getByText('240 g')).toBeTruthy()
+      await jump(20) // dentro de la espera del bloom
+      expect(screen.getByText('Esperá')).toBeTruthy()
+      expect(screen.getByText(/casi drenado, no seco/)).toBeTruthy()
 
-      await jump(30) // 2:10 → Drenado, sin verter
-      expect(screen.getByText('Drenado')).toBeTruthy()
+      await jump(30) // 0:50 → segundo pulso
+      expect(screen.getByText('Verté')).toBeTruthy()
+      expect(target()).toBe('120 g')
+
+      await jump(45) // 1:35 → tercer pulso
+      expect(target()).toBe('180 g')
+
+      await jump(40) // 2:15 → cuarto pulso
+      expect(target()).toBe('240 g')
+
+      await jump(40) // 2:55 → quinto y último pulso
+      expect(target()).toBe('300 g')
+
+      await jump(20) // 3:15 → drenado, sin verter
       expect(screen.getByText(/no viertas más/)).toBeTruthy()
 
-      await jump(40) // 2:50 → pasó el fin (2:45): resumen
+      await jump(20) // 3:35 → pasó el fin (3:30): resumen
       expect(screen.getByText('Lectura del drenado')).toBeTruthy()
       expect(screen.getByText(/quedar seco justo en/)).toBeTruthy()
+      expect(screen.getByText(/pulsos tardíos drenan más lento/)).toBeTruthy()
     } finally {
       vi.useRealTimers()
     }
@@ -225,6 +251,122 @@ describe('V60', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }))
 
     expect(screen.getByText(/tiene que llegar al 100 %/)).toBeTruthy()
+  })
+})
+
+/**
+ * En Android, sin una entrada de historial propia, el gesto de volver cierra
+ * la app entera. Cada overlay tiene que consumirlo.
+ */
+describe('volver atrás', () => {
+  /** Lo que hace Android: retroceder en el historial del WebView. */
+  const pressBack = async () => {
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+    })
+  }
+
+  it('cierra el sheet de alta de café sin salir de la app', async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    await user.click(screen.getByRole('button', { name: '+ Café' }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    await pressBack()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: '+ Café' })).toBeTruthy()
+  })
+
+  it('cierra el editor de recetas', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+
+    await user.click(screen.getByRole('button', { name: 'Editar Hoffmann' }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    await pressBack()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('sale de la pantalla de preparar una receta', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+
+    const card = screen.getByText('Rao').closest('.card') as HTMLElement
+    await user.click(within(card).getByRole('button', { name: 'Preparar Rao' }))
+    expect(screen.getByRole('button', { name: '▶ Iniciar' })).toBeTruthy()
+
+    await pressBack()
+    expect(screen.queryByRole('button', { name: '▶ Iniciar' })).toBeNull()
+    expect(screen.getByText('Kasuya 4:6')).toBeTruthy()
+  })
+
+  it('sale del asistente con el brew en curso', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+
+    const card = screen.getByText('Rao').closest('.card') as HTMLElement
+    await user.click(within(card).getByRole('button', { name: 'Preparar Rao' }))
+    await user.click(screen.getByRole('button', { name: '▶ Iniciar' }))
+    expect(screen.getByText('Verté')).toBeTruthy()
+
+    await pressBack()
+    expect(screen.queryByText('Verté')).toBeNull()
+    expect(screen.getByText('Hoffmann')).toBeTruthy()
+  })
+
+  it('sobrevive a que un sheet reemplace a otro en el mismo commit', async () => {
+    // Ficha del café → "Editar datos" desmonta un sheet y monta otro en el
+    // mismo commit. Si el descuento del historial no se difiriera, el sheet
+    // nuevo recibiría el popstate del viejo y se cerraría solo.
+    const user = userEvent.setup()
+    renderApp()
+
+    await user.click(screen.getByRole('button', { name: '+ Café' }))
+    await user.type(screen.getByLabelText('Marca'), 'KOPI')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await user.click(screen.getByText('KOPI'))
+    await user.click(screen.getByRole('button', { name: 'Editar datos' }))
+
+    // El formulario sigue abierto, no se cerró solo.
+    await act(async () => {})
+    expect(screen.getByLabelText('Marca')).toBeTruthy()
+
+    // Y volver lo cierra a él.
+    await pressBack()
+    expect(screen.queryByLabelText('Marca')).toBeNull()
+  })
+
+  it('no deja entradas de historial acumuladas al abrir y cerrar', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    const before = history.length
+
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole('button', { name: '+ Café' }))
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+      await act(async () => {})
+    }
+
+    expect(history.length).toBeLessThanOrEqual(before + 1)
+  })
+
+  it('todos los sheets tienen además un botón visible para cerrar', async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    // El de preparar la receta era el que no tenía ninguna salida a la vista.
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+    const card = screen.getByText('Hoffmann').closest('.card') as HTMLElement
+    await user.click(within(card).getByRole('button', { name: 'Preparar Hoffmann' }))
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
 
