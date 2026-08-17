@@ -211,13 +211,19 @@ describe('V60', () => {
 
       await jump(20) // dentro de la espera del bloom
       expect(screen.getByText('Esperá')).toBeTruthy()
-      expect(screen.getByText(/casi drenado, no seco/)).toBeTruthy()
+      // El bloom tiene su propia pista: ahí lo que pasa es la desgasificación.
+      expect(screen.getByText(/libera CO₂/)).toBeTruthy()
 
       await jump(30) // 0:50 → segundo pulso
       expect(screen.getByText('Verté')).toBeTruthy()
       expect(target()).toBe('120 g')
 
-      await jump(45) // 1:35 → tercer pulso
+      await jump(25) // 1:15 → espera del segundo pulso: ahí sí la pista de drenado
+      expect(screen.getByText('Esperá')).toBeTruthy()
+      expect(screen.getByText('debería quedar casi drenado, no seco')).toBeTruthy()
+
+      await jump(20) // 1:35 → tercer pulso
+      expect(screen.getByText('Verté')).toBeTruthy()
       expect(target()).toBe('180 g')
 
       await jump(40) // 2:15 → cuarto pulso
@@ -228,6 +234,7 @@ describe('V60', () => {
 
       await jump(20) // 3:15 → drenado, sin verter
       expect(screen.getByText(/no viertas más/)).toBeTruthy()
+      expect(screen.getByText('el filtro debería quedar seco al terminar')).toBeTruthy()
 
       await jump(20) // 3:35 → pasó el fin (3:30): resumen
       expect(screen.getByText('Lectura del drenado')).toBeTruthy()
@@ -236,6 +243,39 @@ describe('V60', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('la pista de la espera se edita en la receta y aparece en el asistente', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+
+    // Rao: el bloom es pulsado, así que tiene pista editable.
+    await user.click(screen.getByRole('button', { name: 'Editar Rao' }))
+    const hints = within(screen.getByRole('dialog')).getAllByLabelText(/Qué mirar durante la espera/)
+    await user.clear(hints[0])
+    await user.type(hints[0], 'mirá la cúpula, no la balanza')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    const card = screen.getByText('Rao').closest('.card') as HTMLElement
+    await user.click(within(card).getByRole('button', { name: 'Preparar Rao' }))
+    await user.click(screen.getByRole('button', { name: '▶ Iniciar' }))
+
+    // Durante el vertido no se muestra; es una guía para cuando no vertés.
+    expect(screen.getByText('Verté')).toBeTruthy()
+    expect(screen.queryByText('mirá la cúpula, no la balanza')).toBeNull()
+  })
+
+  it('un vertido continuo no pide pista de espera: no tiene ese momento', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(screen.getByRole('button', { name: /V60/ }))
+    await user.click(screen.getByRole('button', { name: 'Editar Rao' }))
+
+    const dialog = screen.getByRole('dialog')
+    // Rao tiene 4 pasos: bloom (pulso), 2 pours continuos y drenado.
+    // Solo el bloom y el drenado tienen campo de pista.
+    expect(within(dialog).getAllByLabelText(/Qué mirar durante la espera/)).toHaveLength(2)
   })
 
   it('el editor rechaza una receta que no cierra en el 100 %', async () => {

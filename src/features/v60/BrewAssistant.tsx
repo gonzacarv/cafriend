@@ -14,9 +14,6 @@ export type BrewParams = {
   coffeeName?: string
 }
 
-/** Espera mínima para que valga la pena hablar de drenado del lecho. */
-const MEANINGFUL_WAIT_SEC = 12
-
 type Phase = 'pour' | 'wait'
 
 /**
@@ -132,6 +129,9 @@ export function BrewAssistant({
           </div>
         </div>
 
+        {/* Fuera del anillo: es una frase, y adentro rompía el círculo. */}
+        {!pouring && current.step.hint && <div className="brew__hint">{current.step.hint}</div>}
+
         <div className="brew__next">{describeNext(current, next, pouring)}</div>
       </div>
 
@@ -166,31 +166,28 @@ function PhaseDetail({ step, pouring }: { step: ResolvedStep; pouring: boolean }
 
   if (step.step.kind === 'drawdown') {
     return (
-      <>
-        <div className="brew__target-label" style={{ marginTop: 10 }}>
-          no viertas más
-        </div>
-        <div className="brew__pour-hint">el filtro debería quedar seco al terminar</div>
-      </>
+      <div className="brew__target-label" style={{ marginTop: 10 }}>
+        no viertas más
+      </div>
     )
   }
 
-  // Espera entre pulsos: lo que se mira es el nivel del agua en el cono.
+  // Espera entre pulsos: el objetivo ya está en la balanza, no hay que tocarla.
+  // Qué mirar en el cono lo dice la pista, debajo del anillo.
+  if (step.targetWater === null) {
+    return (
+      <div className="brew__target-label" style={{ marginTop: 10 }}>
+        no viertas
+      </div>
+    )
+  }
+
   return (
     <>
-      {step.targetWater !== null && (
-        <>
-          <div className="brew__target tnum" style={{ opacity: 0.55 }}>
-            {step.targetWater} g
-          </div>
-          <div className="brew__target-label">ya vertido</div>
-        </>
-      )}
-      <div className="brew__pour-hint">
-        {step.waitSec >= MEANINGFUL_WAIT_SEC
-          ? 'debería quedar casi drenado, no seco'
-          : 'dejá que baje el nivel'}
+      <div className="brew__target tnum" style={{ opacity: 0.55 }}>
+        {step.targetWater} g
       </div>
+      <div className="brew__target-label">ya vertido</div>
     </>
   )
 }

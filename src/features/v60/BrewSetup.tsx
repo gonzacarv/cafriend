@@ -118,6 +118,7 @@ export function BrewSetup({
       )}
 
       <div className="section-label">Plan</div>
+      <div className="plan-wrap">
       <table className="plan">
         <thead>
           <tr>
@@ -153,6 +154,7 @@ export function BrewSetup({
           ))}
         </tbody>
       </table>
+      </div>
       <div className="subtitle" style={{ marginTop: 8 }}>
         A {recipe.flowRate} g/s. En los tramos de espera no viertas: dejá que el lecho drene hasta quedar
         casi seco antes del vertido siguiente.

@@ -46,6 +46,12 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  /* El único scroll de la app es vertical. Si algo desborda a lo ancho es un
+     bug de layout: esto evita que se convierta en un slider lateral. */
+  overflow-x: hidden;
+  /* Una palabra larguísima (un nombre de café sin espacios) parte en vez de
+     empujar el ancho del contenedor. */
+  overflow-wrap: break-word;
 }
 
 button,
@@ -83,6 +89,7 @@ h3 {
 
 .app__body {
   flex: 1;
+  min-width: 0;
   padding: var(--pad);
   padding-top: calc(var(--pad) + env(safe-area-inset-top));
   padding-bottom: calc(var(--nav-h) + var(--pad) * 2 + env(safe-area-inset-bottom));
@@ -287,11 +294,15 @@ h3 {
 }
 
 .coffee__info {
+  /* display:block es necesario: son <span>, y sin esto el ellipsis de
+     .coffee__name no recorta y el nombre largo ensancha toda la tarjeta. */
+  display: block;
   flex: 1;
   min-width: 0;
 }
 
 .coffee__name {
+  display: block;
   font-weight: 700;
   font-size: 17px;
   white-space: nowrap;
@@ -419,6 +430,17 @@ h3 {
 .row > * {
   flex: 1;
   min-width: 0;
+}
+
+/* Con ~250 países la lista tiene que scrollear sola y no estirar el sheet. */
+.country-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 168px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .switch {
@@ -710,10 +732,27 @@ h3 {
 }
 
 /* ── Plan de brewing ────────────────────────────────────────────────────── */
+/* Si la tabla no entra, scrollea ella sola en vez de ensanchar la pantalla. */
+.plan-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .plan {
   width: 100%;
   border-collapse: collapse;
   font-size: 15px;
+}
+
+.plan th,
+.plan td {
+  white-space: nowrap;
+}
+
+.plan td:first-child,
+.plan th:first-child {
+  white-space: normal;
+  padding-right: 10px;
 }
 
 .plan th {
@@ -875,6 +914,21 @@ h3 {
   color: var(--muted);
   font-size: 14px;
   margin-top: 6px;
+}
+
+/* Qué mirar en el cono durante la espera. Va abajo del anillo, no adentro:
+   es una frase y dentro del círculo desbordaba. */
+.brew__hint {
+  margin-top: 16px;
+  max-width: 320px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
 }
 
 .brew__next {

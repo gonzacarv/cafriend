@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Sheet } from '../../ui/Sheet'
-import { flagEmoji, searchCountries } from '../../lib/flags'
+import { countryName, flagEmoji, searchCountries } from '../../lib/flags'
 import { todayIso } from '../../lib/format'
 import { GRIND_MAX, GRIND_MIN, type Coffee } from '../../store/schema'
 
@@ -68,24 +68,21 @@ export function CoffeeForm({
 
       <div className="field">
         <span className="field__label">
-          País {countryCode && <span style={{ fontSize: 18 }}>{flagEmoji(countryCode)}</span>}
+          País{' '}
+          {countryCode && (
+            <span style={{ fontSize: 18 }}>
+              {flagEmoji(countryCode)} {countryName(countryCode)}
+            </span>
+          )}
         </span>
         <input
           className="input"
           value={countryQuery}
           placeholder="Buscar país…"
+          aria-label="Buscar país"
           onChange={(e) => setCountryQuery(e.target.value)}
         />
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 6,
-            marginTop: 10,
-            maxHeight: 132,
-            overflowY: 'auto',
-          }}
-        >
+        <div className="country-list">
           {results.map((c) => (
             <button
               key={c.code}
@@ -104,6 +101,11 @@ export function CoffeeForm({
           ))}
           {results.length === 0 && <span className="subtitle">Sin resultados.</span>}
         </div>
+        {!countryQuery.trim() && (
+          <div className="subtitle" style={{ marginTop: 8 }}>
+            Se muestran los países productores. Buscá para encontrar cualquier otro.
+          </div>
+        )}
       </div>
 
       <label className="field">

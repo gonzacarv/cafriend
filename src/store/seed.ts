@@ -1,4 +1,4 @@
-import { DEFAULT_FLOW_RATE, newId, type Recipe, type Step } from './schema'
+import { DEFAULT_FLOW_RATE, DEFAULT_HINT, newId, type Recipe, type Step } from './schema'
 
 /**
  * Las 3 recetas que vienen cargadas.
@@ -37,10 +37,18 @@ export function seedRecipes(): Recipe[] {
       notes:
         'Simple, consistente, balanceado. Taza limpia y dulce. Los dos vertidos son continuos, con una pausa corta entre medio. Tolerancia alta al error — el de todos los días y el de café desconocido.',
       steps: [
-        s({ kind: 'bloom', label: 'Bloom', startSec: 0, endSec: 30, cumulative: 40 / 240, style: 'pulse' }),
+        s({
+          kind: 'bloom',
+          label: 'Bloom',
+          startSec: 0,
+          endSec: 30,
+          cumulative: 40 / 240,
+          style: 'pulse',
+          hint: 'el lecho se hincha y libera CO₂; no viertas',
+        }),
         s({ kind: 'pour', label: 'Pour 1', startSec: 30, endSec: 75, cumulative: 160 / 240, style: 'continuous' }),
         s({ kind: 'pour', label: 'Pour 2', startSec: 75, endSec: 105, cumulative: 1, style: 'continuous' }),
-        s({ kind: 'drawdown', label: 'Drenado', startSec: 105, maxEndSec: 150 }),
+        s({ kind: 'drawdown', label: 'Drenado', startSec: 105, maxEndSec: 150, hint: DEFAULT_HINT.drawdown }),
       ],
       createdAt: t,
       updatedAt: t,
@@ -54,10 +62,18 @@ export function seedRecipes(): Recipe[] {
       notes:
         'Control y precisión. Alta claridad, acidez definida. Después del bloom el vertido es continuo a propósito: Rao evita los pulsos porque reasientan el lecho. Para cafés de especialidad y tuestes claros.',
       steps: [
-        s({ kind: 'bloom', label: 'Bloom', startSec: 0, endSec: 45, cumulative: 48 / 240, style: 'pulse' }),
+        s({
+          kind: 'bloom',
+          label: 'Bloom',
+          startSec: 0,
+          endSec: 45,
+          cumulative: 48 / 240,
+          style: 'pulse',
+          hint: 'el lecho se hincha y libera CO₂; no viertas',
+        }),
         s({ kind: 'pour', label: 'Pour 1', startSec: 45, endSec: 90, cumulative: 180 / 240, style: 'continuous' }),
         s({ kind: 'pour', label: 'Pour 2', startSec: 90, endSec: 120, cumulative: 1, style: 'continuous' }),
-        s({ kind: 'drawdown', label: 'Drenado', startSec: 120, maxEndSec: 165 }),
+        s({ kind: 'drawdown', label: 'Drenado', startSec: 120, maxEndSec: 165, hint: DEFAULT_HINT.drawdown }),
       ],
       createdAt: t,
       updatedAt: t,
@@ -77,12 +93,20 @@ export function seedRecipes(): Recipe[] {
       notes:
         'Modulación total del perfil. Cinco vertidos cortos con esperas largas: cada pulso arranca cuando el anterior casi terminó de drenar. Para experimentar o entender un café frutal o complejo.',
       steps: [
-        s({ kind: 'bloom', label: 'Bloom', startSec: 0, endSec: 45, cumulative: 1 / 6, style: 'pulse' }),
-        s({ kind: 'pour', label: 'Pour 2', startSec: 45, endSec: 90, cumulative: 0.4, style: 'pulse' }),
-        s({ kind: 'pour', label: 'Pour 3', startSec: 90, endSec: 130, cumulative: 0.6, style: 'pulse' }),
-        s({ kind: 'pour', label: 'Pour 4', startSec: 130, endSec: 170, cumulative: 0.8, style: 'pulse' }),
-        s({ kind: 'pour', label: 'Pour 5', startSec: 170, endSec: 185, cumulative: 1, style: 'pulse' }),
-        s({ kind: 'drawdown', label: 'Drenado', startSec: 185, maxEndSec: 210 }),
+        s({
+          kind: 'bloom',
+          label: 'Bloom',
+          startSec: 0,
+          endSec: 45,
+          cumulative: 1 / 6,
+          style: 'pulse',
+          hint: 'el lecho se hincha y libera CO₂; no viertas',
+        }),
+        s({ kind: 'pour', label: 'Pour 2', startSec: 45, endSec: 90, cumulative: 0.4, style: 'pulse' , hint: DEFAULT_HINT.pulse }),
+        s({ kind: 'pour', label: 'Pour 3', startSec: 90, endSec: 130, cumulative: 0.6, style: 'pulse' , hint: DEFAULT_HINT.pulse }),
+        s({ kind: 'pour', label: 'Pour 4', startSec: 130, endSec: 170, cumulative: 0.8, style: 'pulse' , hint: DEFAULT_HINT.pulse }),
+        s({ kind: 'pour', label: 'Pour 5', startSec: 170, endSec: 185, cumulative: 1, style: 'pulse' , hint: DEFAULT_HINT.pulse }),
+        s({ kind: 'drawdown', label: 'Drenado', startSec: 185, maxEndSec: 210, hint: DEFAULT_HINT.drawdown }),
       ],
       createdAt: t,
       updatedAt: t,

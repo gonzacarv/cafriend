@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { mmss } from '../../lib/format'
-import { DEFAULT_FLOW_RATE, hasTarget, newId, stepEnd, type Recipe } from '../../store/schema'
+import { DEFAULT_FLOW_RATE, DEFAULT_HINT, hasTarget, newId, stepEnd, type Recipe } from '../../store/schema'
 import { totalDurationSec } from '../../lib/scaling'
 import { useStore } from '../../store/useStore'
 import { RecipeEditor } from './RecipeEditor'
@@ -23,9 +23,27 @@ export function V60View() {
       // Pulso por defecto: es lo correcto para quien no conoce la distinción,
       // y el bloom es pulsado en todas las escuelas.
       steps: [
-        { id: newId(), kind: 'bloom', label: 'Bloom', startSec: 0, endSec: 30, cumulative: 1 / 6, style: 'pulse' },
-        { id: newId(), kind: 'pour', label: 'Pour 1', startSec: 30, endSec: 75, cumulative: 1, style: 'pulse' },
-        { id: newId(), kind: 'drawdown', label: 'Drenado', startSec: 75, maxEndSec: 150 },
+        {
+          id: newId(),
+          kind: 'bloom',
+          label: 'Bloom',
+          startSec: 0,
+          endSec: 30,
+          cumulative: 1 / 6,
+          style: 'pulse',
+          hint: 'el lecho se hincha y libera CO₂; no viertas',
+        },
+        {
+          id: newId(),
+          kind: 'pour',
+          label: 'Pour 1',
+          startSec: 30,
+          endSec: 75,
+          cumulative: 1,
+          style: 'pulse',
+          hint: DEFAULT_HINT.pulse,
+        },
+        { id: newId(), kind: 'drawdown', label: 'Drenado', startSec: 75, maxEndSec: 150, hint: DEFAULT_HINT.drawdown },
       ],
       createdAt: t,
       updatedAt: t,

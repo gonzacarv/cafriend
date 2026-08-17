@@ -42,8 +42,15 @@ export type Coffee = {
  */
 export type PourStyle = 'pulse' | 'continuous'
 
+/**
+ * Qué mirar mientras no se vierte. El asistente lo muestra durante la espera
+ * del paso; es la única guía disponible cuando el objetivo no es un número de
+ * balanza sino el estado del lecho. Editable por paso.
+ */
+export type StepHint = { hint?: string }
+
 export type Step =
-  | {
+  | ({
       id: string
       kind: 'bloom' | 'pour'
       label: string
@@ -53,9 +60,15 @@ export type Step =
       cumulative: number
       /** 'pulse' vierte a `flowRate` y espera el resto; 'continuous' llena la ventana. */
       style: PourStyle
-    }
-  | { id: string; kind: 'wait'; label: string; startSec: number; endSec: number }
-  | { id: string; kind: 'drawdown'; label: string; startSec: number; maxEndSec: number }
+    } & StepHint)
+  | ({ id: string; kind: 'wait'; label: string; startSec: number; endSec: number } & StepHint)
+  | ({ id: string; kind: 'drawdown'; label: string; startSec: number; maxEndSec: number } & StepHint)
+
+/** Texto por defecto de la pista, según lo que se espera en ese paso. */
+export const DEFAULT_HINT = {
+  pulse: 'debería quedar casi drenado, no seco',
+  drawdown: 'el filtro debería quedar seco al terminar',
+} as const
 
 export type Recipe = {
   id: string

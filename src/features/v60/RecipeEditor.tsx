@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Sheet } from '../../ui/Sheet'
 import { mmss, parseMmss } from '../../lib/format'
 import { blockingIssues, splitPour, validateRecipe } from '../../lib/scaling'
-import { newId, stepEnd, type PourStyle, type Recipe, type Step } from '../../store/schema'
+import { DEFAULT_HINT, newId, stepEnd, type PourStyle, type Recipe, type Step } from '../../store/schema'
 
 const KIND_LABEL: Record<Step['kind'], string> = {
   bloom: 'Bloom',
@@ -237,6 +237,19 @@ export function RecipeEditor({
               onChange={(style) => patchStep(index, { style })}
             />
           )}
+
+          {hasWaitPhase(step) && (
+            <label style={{ display: 'block', marginTop: 10 }}>
+              <span className="field__label">Qué mirar durante la espera</span>
+              <input
+                className="input"
+                style={{ minHeight: 42, padding: '8px 10px' }}
+                value={step.hint ?? ''}
+                placeholder={step.kind === 'drawdown' ? DEFAULT_HINT.drawdown : DEFAULT_HINT.pulse}
+                onChange={(e) => patchStep(index, { hint: e.target.value })}
+              />
+            </label>
+          )}
         </div>
       ))}
 
@@ -268,6 +281,16 @@ export function RecipeEditor({
       )}
     </Sheet>
   )
+}
+
+/**
+ * Solo tiene sentido pedir una pista en los pasos donde el usuario está
+ * mirando el cono en vez de la balanza: pulsos con espera, esperas y drenado.
+ * Un vertido continuo no tiene ese momento.
+ */
+function hasWaitPhase(step: Step): boolean {
+  if (step.kind === 'drawdown' || step.kind === 'wait') return true
+  return step.style === 'pulse'
 }
 
 /** El acumulado del vertido anterior, para saber cuánta agua lleva este paso. */

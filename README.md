@@ -1,9 +1,7 @@
-<h1 align="center">☕ CaFriend</h1>
+# ☕ CaFriend
 
-<p align="center">
-  <strong>Tu asistente de café, en el bolsillo.</strong><br>
-  Seguí la molienda de cada café y preparate un V60 sin mirar una tabla.
-</p>
+Aplicación web para seguimiento de molienda de espresso y preparación asistida
+de V60. Funciona sin conexión y guarda los datos en el propio dispositivo.
 
 <p align="center">
   <img src="img/screenshot.png" alt="CaFriend en un teléfono Android" width="320">
@@ -11,144 +9,135 @@
 
 ---
 
-## 🎯 Qué es
+## Qué resuelve
 
-Una app web que se instala en el teléfono y funciona **sin internet**. Nació para
-reemplazar dos notas de Obsidian: una tabla con el punto de molienda de cada café
-y otra con recetas de V60 que había que leer con el celular apoyado en la mesada
-mientras se vertía el agua.
+Dos tareas concretas del café de especialidad:
 
-Hace dos cosas, y las hace bien:
+- 🎛️ **Espresso** — registro del punto de molienda de cada café en uso, con
+  historial fechado de cada ajuste.
+- 🌀 **V60** — recetas que escalan a cualquier dosis, y un asistente que guía
+  tiempos y pesos durante la preparación.
 
-- 🎛️ **Espresso** — te acordás por vos de en qué número está el molinillo para
-  cada café que tenés abierto.
-- 🌀 **V60** — te guía paso a paso durante la preparación, con tiempos y pesos.
-
-No tiene cuenta, no tiene servidor, no manda tus datos a ningún lado. Todo vive
-en tu teléfono. 🔒
+No requiere cuenta ni servidor. Los datos quedan en el almacenamiento local del
+navegador o de la app.
 
 ---
 
-## 🎛️ Espresso: dejá de anotar el molinillo en un papel
+## 🎛️ Espresso — seguimiento de molienda
 
-Cada café que abrís se carga una vez —marca, tipo, país 🇧🇷 y fecha de tueste— y
-después la app te muestra **el número del molinillo en grande**, que es lo único
-que necesitás ver a las 7 de la mañana.
+Cada café se da de alta una vez con marca, tipo, país y fecha de tueste. La
+pantalla principal muestra el valor actual del molinillo en tamaño grande.
 
-| Lo que hacés | Lo que pasa |
+| Acción | Resultado |
 | --- | --- |
-| Tocás el número y lo movés | Queda registrado con fecha y hora |
-| Escribís una nota | *“salió amargo, abro un punto”* queda con el cambio |
-| Se te acaba el paquete | Pasa a **Finalizados** con todo su historial intacto |
+| Modificar el valor | Se registra con fecha y hora |
+| Agregar una nota | Queda asociada a ese ajuste (*"amargo, abro un punto"*) |
+| Marcar el café como terminado | Pasa a **Finalizados**, conservando el historial |
 
-El historial te muestra cada ajuste con una flecha: **↓ más fino**, **↑ más
-grueso**. Cuando volvés a comprar el mismo café, ya sabés dónde arrancar.
-
-Además te avisa cuántos días de tueste lleva, porque un café de 2 días todavía
-desgasifica y uno de 40 ya perdió lo mejor. 📅
+El historial indica la dirección de cada cambio: **↓ más fino**, **↑ más
+grueso**. También se muestran los días transcurridos desde el tueste.
 
 ---
 
-## 🌀 V60: una receta, cualquier tamaño
+## 🌀 V60 — recetas escalables
 
-Las recetas no guardan mililitros fijos: guardan **proporciones**. Elegís el
-tamaño por donde te resulte más natural y la app calcula el resto.
+Las recetas almacenan proporciones, no mililitros fijos. El tamaño de la
+preparación se define por cualquiera de estas tres magnitudes y el resto se
+calcula:
 
-| Si sabés… | Te dice… |
+| Dato de entrada | Cálculo |
 | --- | --- |
-| ☕ Cuánto querés **tomar** (250 ml en taza) | Cuánto café moler y cuánta agua |
-| 💧 Cuánta **agua** vas a verter (300 ml) | Cuánto café moler y qué te queda en taza |
-| ⚖️ Cuánto **café** tenés molido (18 g) | Cuánta agua verter y qué te queda en taza |
+| Café en taza (250 ml) | Dosis de café molido y agua total |
+| Agua a verter (300 ml) | Dosis de café molido y café en taza |
+| Café molido (18 g) | Agua total y café en taza |
 
-> 💡 **Agua vertida ≠ café en la taza.** El lecho de café se queda con unos 2 ml
-> por cada gramo, así que 240 ml de agua sobre 16 g de café dejan ~208 ml en la
-> taza. La app maneja los dos números por separado y durante la preparación
-> siempre te muestra **el de la balanza**.
+> **Agua vertida y café en taza no son lo mismo.** El lecho retiene alrededor de
+> 2 ml por gramo de café: 240 ml de agua sobre 16 g dejan unos 208 ml en la
+> taza. La aplicación distingue ambos valores y durante la preparación muestra
+> siempre el de la balanza.
 
-Vienen tres recetas cargadas, y podés crear las tuyas:
+Incluye tres recetas y permite crear otras:
 
-| Receta | Estilo | Para cuándo |
+| Receta | Característica | Uso habitual |
 | --- | --- | --- |
-| 🇬🇧 **Hoffmann** | Simple y consistente | Todos los días, café desconocido |
-| 🇺🇸 **Rao** | Control y claridad | Especialidad, tuestes claros |
-| 🇯🇵 **Kasuya 4:6** | Modulable, pulsado | Cafés frutales, experimentar |
+| 🇬🇧 **Hoffmann** | Vertidos continuos, tolerante al error | Uso diario, café desconocido |
+| 🇺🇸 **Rao** | Vertido continuo tras el bloom, alta claridad | Especialidad, tuestes claros |
+| 🇯🇵 **Kasuya 4:6** | Cinco pulsos con esperas largas | Cafés frutales, experimentación |
 
 ---
 
-## ▶️ El asistente: apretás play y soltás el teléfono
+## ▶️ Asistente de preparación
 
-Acá está la gracia. Una vez que arranca la receta, **no hay nada que tocar hasta
-que termina**. El teléfono te avisa con un sonido y una vibración distinta cada
-vez que tenés que cambiar lo que estás haciendo, así que podés mirar el café en
-vez de la pantalla.
+Una vez iniciada la receta no requiere interacción hasta que termina. Cada
+transición se señala con un sonido y un patrón de vibración distinto, de modo
+que no es necesario mirar la pantalla.
 
-En cada momento te dice una sola cosa:
+En cada momento se indica una sola acción:
 
-- 💧 **VERTÉ** — cuánto tiene que marcar la balanza y en cuántos segundos.
-- ⏸️ **ESPERÁ** — cuánto falta para el próximo vertido. No viertas.
+- 💧 **Verté** — peso objetivo en la balanza y tiempo disponible.
+- ⏸️ **Esperá** — tiempo restante hasta el próximo vertido, y qué observar en el
+  cono mientras tanto.
 
-Esa distinción importa: salvo que la receta lo pida explícitamente, **uno no
-vierte todo el tiempo**. Vierte, espera a que el lecho drene, y vuelve a verter.
-El bloom es el caso más claro: se vierte en unos segundos y se espera medio
-minuto. La app calcula cuánto dura cada vertido según el caudal de tu pava, así
-que si preparás una jarra más grande, el vertido se alarga solo.
+La distinción es relevante: salvo en los vertidos declarados como continuos, no
+se vierte durante toda la ventana de tiempo. Se vierte, se espera a que el lecho
+drene, y se vuelve a verter. El bloom es el caso más claro: unos segundos de
+vertido y medio minuto de espera.
 
-La pantalla se mantiene encendida sola 🔆 y el reloj no se atrasa aunque el
-teléfono se distraiga.
+La duración de cada vertido se calcula a partir del caudal configurado en la
+receta, por lo que se ajusta sola al cambiar la dosis.
+
+La pantalla permanece encendida durante la preparación y el cronómetro se
+mantiene exacto aunque el sistema suspenda la aplicación en segundo plano.
 
 ---
 
-## 🔍 El truco: el drenado te dice cómo estás moliendo
+## 🔍 Diagnóstico de molienda por drenado
 
-Cada receta define a qué segundo debería quedar seco el filtro. Comparalo con lo
-que pasó de verdad:
+Cada receta define el momento en que el filtro debería quedar seco. La
+comparación con lo observado orienta el ajuste del molinillo:
 
-| Lo que viste | Qué significa | Qué hacer |
+| Observación | Interpretación | Ajuste |
 | --- | --- | --- |
-| 🐌 Todavía goteaba | Molienda **muy fina** | Abrí el molinillo |
-| 🐇 Drenó bastante antes | Molienda **muy gruesa** | Cerralo |
-| 🎯 Terminó cerca del objetivo | Estás en punto | Nada, disfrutá |
+| Seguía goteando | Molienda demasiado fina | Abrir el molinillo |
+| Drenó bastante antes | Molienda demasiado gruesa | Cerrar el molinillo |
+| Terminó cerca del objetivo | Molienda adecuada | Sin cambios |
 
-Tres advertencias honestas, para que no persigas fantasmas:
+Tres limitaciones a tener en cuenta al interpretarlo:
 
-1. **No es solo la molienda.** La altura del vertido, la agitación y la
-   temperatura mueven el drenado tanto como el clic del molinillo.
-2. **Los últimos pulsos drenan más lento, y es normal.** Los finos migran y el
-   filtro se carga a medida que avanza la preparación.
-3. **Más café drena más lento.** El lecho es más profundo. Un mismo tiempo
-   objetivo es aproximado si cambiás mucho la dosis.
+1. **El drenado no depende solo de la molienda.** La altura del vertido, la
+   agitación y la temperatura influyen de forma comparable.
+2. **Los últimos pulsos drenan más lento.** Los finos migran y el filtro se
+   satura a medida que avanza la preparación.
+3. **Una dosis mayor drena más lento.** El lecho es más profundo, por lo que un
+   mismo tiempo objetivo pierde precisión si la dosis cambia mucho.
 
-La señal que más vale es el **tiempo total**; el drenado de cada pulso es una
-pista direccional.
+El tiempo total de preparación es el indicador más confiable; el drenado de cada
+pulso aporta una señal complementaria.
 
 ---
 
-## 💾 Tus datos son tuyos
+## 💾 Gestión de datos
 
-Ajustes → **Descargar backup** te da un archivo `.json` con todos tus cafés, su
-historial y tus recetas. Sirve para cambiar de teléfono, para reinstalar sin
-perder nada, o simplemente para dormir tranquilo.
+Ajustes → **Descargar backup** genera un archivo `.json` con los cafés, su
+historial y las recetas. Sirve para migrar a otro dispositivo o restaurar
+después de una reinstalación.
 
-Al importarlo podés **fusionar** (gana la versión más reciente de cada cosa) o
-**reemplazar todo**. 🔁
+Al importar se puede **fusionar** —prevalece la versión más reciente de cada
+registro— o **reemplazar** el contenido actual.
 
 ---
 
 ## 📱 Instalación
 
-**Opción A — APK de Android.** Descargá `cafriend.apk`, abrilo en el teléfono y
-aceptá instalar desde origen desconocido. La app queda instalada de verdad, con
-todo adentro: no necesita internet nunca.
+**APK de Android.** Descargar `cafriend.apk`, abrirlo en el dispositivo y
+autorizar la instalación desde origen desconocido. La aplicación queda instalada
+con todos sus recursos incluidos y no requiere conexión.
 
-**Opción B — desde el navegador.**
+**Desde el navegador.** Abrir la aplicación en Chrome y usar
+Menú ⋮ → **Agregar a pantalla de inicio**.
 
-1. Abrí la app en Chrome desde el teléfono.
-2. Menú ⋮ → **Agregar a pantalla de inicio**.
-3. Listo: queda con su ícono y funciona sin conexión.
-
-> Para que la pantalla se mantenga encendida durante la preparación, la app tiene
-> que estar servida por HTTPS. El APK cumple esto solo; desde una IP de red local
-> por `http://` todo lo demás funciona, pero esa parte no.
+> El bloqueo de apagado de pantalla requiere que la aplicación se sirva por
+> HTTPS. El APK cumple esa condición; una IP de red local por `http://` no.
 
 ---
 
@@ -157,30 +146,30 @@ todo adentro: no necesita internet nunca.
 ```bash
 npm install
 npm run dev      # http://localhost:5173/cafriend/
-npm test         # tests de escalado de recetas y de la interfaz
+npm test         # lógica de recetas, interfaz y reglas de layout
 npm run build    # bundle de producción en dist/
 ```
 
-**Stack:** React + TypeScript + Vite, con `vite-plugin-pwa` para el service
-worker. Sin backend y sin librerías de estado: los datos van a `localStorage` y
-la lógica de recetas son funciones puras en
+React + TypeScript + Vite, con `vite-plugin-pwa` para el service worker. Sin
+backend ni librerías de estado: los datos se guardan en `localStorage` y la
+lógica de recetas son funciones puras en
 [`src/lib/scaling.ts`](src/lib/scaling.ts), cubiertas por tests.
 
-El deploy a GitHub Pages es automático en cada push a `main`
-([workflow](.github/workflows/deploy.yml)). Si lo vas a hostear en otro lado,
-ajustá `base` en [`vite.config.ts`](vite.config.ts).
+El despliegue a GitHub Pages se ejecuta en cada push a `main`
+([workflow](.github/workflows/deploy.yml)). Para alojarlo en otra ruta, ajustar
+`base` en [`vite.config.ts`](vite.config.ts).
 
-### 🤖 Compilar el APK
+### 🤖 Compilación del APK
 
-El APK se arma con [Capacitor](https://capacitorjs.com/): empaqueta la misma app
-web dentro de un WebView, sin depender de ningún servidor.
+El empaquetado usa [Capacitor](https://capacitorjs.com/), que incluye la
+aplicación web dentro de un WebView sin depender de un servidor.
 
 ```bash
 npm run build:apk    # → dist-apk/cafriend.apk
 ```
 
-Hace falta un JDK 21 y el SDK de Android. Si no los tenés, se pueden instalar en
-una carpeta aparte sin tocar el sistema:
+Requiere JDK 21 y el SDK de Android. Ambos pueden instalarse en un directorio
+aparte, sin modificar el sistema:
 
 ```bash
 mkdir -p ~/android-tools && cd ~/android-tools
@@ -191,15 +180,9 @@ yes | sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=sdk --licenses
 sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=sdk "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 ```
 
-El build usa la firma de debug, que alcanza para instalar el APK a mano. Para
-publicarlo en Play Store haría falta una clave de release propia.
+La compilación usa la firma de debug, suficiente para instalar el APK
+manualmente. Publicarlo en Play Store requiere una clave de release propia.
 
-> La compilación para APK usa `--mode capacitor`, que cambia `base` a `/` y saca
-> el service worker: adentro del APK los archivos ya están en el dispositivo y un
-> SW cacheando un origen local solo agrega formas de romperse.
-
----
-
-<p align="center">
-  <sub>Hecho para tomar mejor café ☕</sub>
-</p>
+> El modo `capacitor` del build cambia `base` a `/` y omite el service worker:
+> dentro del APK los archivos ya están en el dispositivo, y un service worker
+> sobre un origen local solo agrega puntos de falla.
